@@ -1,0 +1,74 @@
+;; =============================================================================
+;;  InvoiceSender.tdl  —  Send ANY Voucher via WhatsApp
+;;  Requires: WhatsAppHTTP.tdl
+;; =============================================================================
+
+;; ─── Hook into the Main Voucher Entry Form ───────────────────────────────────
+[#Form: Voucher]
+    Add     : Button    : WA_SendInvoiceBtn
+
+;; ─── Hook into the Default Print Form (Sales Color) ──────────────────────────
+[#Form: Sales Color]
+    Add     : Button    : WA_SendInvoiceBtn
+
+[Button: WA_SendInvoiceBtn]
+    Title   : "WhatsApp Document"
+    Key     : Alt+W
+    Action  : Call : WA_SendInvoice
+
+;; ─── Main function ────────────────────────────────────────────────────────────
+[Function: WA_SendInvoice]
+    Variable : WA_FileName   : String
+    Variable : WA_Contacts   : String
+    Variable : WA_ExportPath : String
+    Variable : WA_Message    : String
+    Variable : WA_BridgeSts  : String
+    Variable : WA_Result     : String
+
+    ;; Safe names for file naming (strip backslashes)
+    Local Formula : WA_VType : $$StringFindAndReplace:$VoucherTypeName:"\":"_"
+    Local Formula : WA_Party : $$StringFindAndReplace:$PartyLedgerName:"\":"_"
+    Local Formula : WA_Date  : $$String:$Date
+
+    01 : Query Box  : "Send this " + @WA_VType + " via WhatsApp?" : Yes : No
+    02 : If         : $$LastResult
+
+    ;; ── Check bridge health first ──
+    03 : SET : WA_BridgeSts : $$WA_CheckBridge
+    38 : If  : NOT (##WA_BridgeSts = "ok")
+    39 : Msg Box : "WhatsApp Bridge" : "❌ Bridge is not running or DLL is unregistered.||Status: " + ##WA_BridgeSts
+    40 : Return
+    41 : End If
+
+    ;; ── Get contact number ──
+    12 : SET : WA_Contacts : @@WA_GetContacts
+    13 : If  : $$IsEmpty:##WA_Contacts
+    14 : Msg Box : "WhatsApp" : "No mobile number found for this party.||Please add a mobile number in the ledger."
+    15 : Return
+    16 : End If
+
+    ;; ── Export PDF ──
+    17 : CALL : WA_EnsureExportDir
+    18 : SET : WA_FileName    : @@WA_ExportDir + "\" + @WA_VType + "_" + @WA_Party + "_" + @WA_Date
+    19 : SET : SVExportFormat  : $$SysName:PDF
+    20 : SET : SVPrintFileName : $$MakeExportName:##WA_FileName:##SVExportFormat
+    21 : SET : SVOpenFileAfterExport : No
+    22 : SET : SVBrowserWidth  : 210
+    23 : SET : SVBrowserHeight : 297
+    24 : SET : SVIsPortrait    : Yes
+    25 : EXPORT REPORT : . : Yes : Yes
+    26 : SET : WA_ExportPath   : $$GetFileFullPath:##SVPrintFileName
+
+    ;; ── Build message ──
+    27 : SET : WA_Message : "Dear " + $PartyLedgerName + ",%0APlease find your *" + @WA_VType + "* dated " + @WA_Date + " attached.%0A%0AThank you!"
+
+    ;; ── Send file + message ──
+    28 : SET : WA_Result : $$WA_HTTPSendFileWithMessage:##WA_Contacts:##WA_ExportPath:##WA_Message
+    29 : If  : $$InString:##WA_Result:"true"
+    30 : Msg Box : "WhatsApp" : "✅ Document sent successfully to " + ##WA_Contacts
+    31 : Else
+    32 : Msg Box : "WhatsApp Error" : "❌ Failed to send.||Response: " + ##WA_Result
+    33 : End If
+
+    34 : End If
+    35 : Return

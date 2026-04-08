@@ -1,0 +1,66 @@
+;; =============================================================================
+;;  PaymentReminder.tdl  —  Send overdue payment reminders via WhatsApp
+;;  Works from Ledger Outstanding / Party Ledger context
+;;  Requires: WhatsAppHTTP.tdl
+;; =============================================================================
+
+;; ─── Add reminder button to Ledger Vouchers report ───────────────────────────
+[#Form: Ledger Vouchers]
+    Add : Button : WA_ReminderBtn
+
+[Button: WA_ReminderBtn]
+    Title  : "WA Reminder"
+    Key    : Alt+R
+    Action : Call : WA_SendPaymentReminder
+
+;; ─── Main function ────────────────────────────────────────────────────────────
+[Function: WA_SendPaymentReminder]
+    Variable : WA_Contacts      : String
+    Variable : WA_Message       : String
+    Variable : WA_ReminderLevel : String
+    Variable : WA_BridgeSts  : String
+    Variable : WA_Result     : String
+
+    Local Formula : WA_Party   : $Name
+    Local Formula : WA_Balance : $$String:$ClosingBalance
+
+    01 : Query Box : "Send a payment reminder to " + @WA_Party + "?" : Yes : No
+    02 : If : $$LastResult
+
+    ;; ── Check bridge health first ──
+    03 : SET : WA_BridgeSts : $$WA_CheckBridge
+    04 : If  : NOT (##WA_BridgeSts = "ok")
+    05 : Msg Box : "WhatsApp Bridge" : "❌ Bridge is not running or DLL is unregistered.||Status: " + ##WA_BridgeSts
+    06 : Return
+    07 : End If
+
+    ;; Fetch mobile – reminder works at ledger level
+    12 : SET : WA_Contacts : @@WA_GetContacts
+    13 : If  : $$IsEmpty:##WA_Contacts
+    14 : Msg Box : "WhatsApp" : "No mobile number found for " + @WA_Party
+    15 : Return
+    16 : End If
+
+    ;; Ask for reminder level
+    17 : Query Box : "Send FINAL (overdue) reminder?" : Yes : No
+    18 : If : $$LastResult
+    19 : SET : WA_ReminderLevel : "FINAL"
+    20 : Else
+    21 : SET : WA_ReminderLevel : "FIRST"
+    22 : End If
+
+    23 : If : ##WA_ReminderLevel = "FINAL"
+    24 : SET : WA_Message : "Dear " + @WA_Party + ",%0A%0A*FINAL NOTICE* — Your outstanding balance of Rs." + @WA_Balance + " is overdue.%0APlease settle immediately to avoid disruption of services.%0A%0AFor assistance, please contact us."
+    25 : Else
+    26 : SET : WA_Message : "Dear " + @WA_Party + ",%0A%0AThis is a friendly reminder that your outstanding balance of Rs." + @WA_Balance + " is pending.%0AKindly arrange payment at your earliest convenience.%0A%0AThank you!"
+    27 : End If
+
+    28 : SET : WA_Result : $$WA_HTTPSendMessage:##WA_Contacts:##WA_Message
+    29 : If  : $$InString:##WA_Result:"true"
+    30 : Msg Box : "WhatsApp Status" : "✅ Reminder sent successfully to " + ##WA_Contacts
+    31 : Else
+    32 : Msg Box : "WhatsApp Status" : "❌ Failed to send.||Response: " + ##WA_Result
+    33 : End If
+
+    34 : End If
+    35 : Return

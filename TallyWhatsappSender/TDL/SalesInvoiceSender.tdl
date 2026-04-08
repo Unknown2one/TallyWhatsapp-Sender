@@ -1,0 +1,122 @@
+;; ====================================================================
+;;  Tally WhatsApp Sender - Sales Invoice Integration
+;;  Updated for HTTP-based WhatsApp Bridge
+;; ====================================================================
+
+[#Form: Sales Color]
+    On : Form Accept : Yes : CALL : SendWhatsapp
+
+[Function: SendWhatsapp]
+    Variable: PrintFileName    : String
+    Variable: Contacts         : String
+    Variable: Exportedfilepath : String
+    Variable: BridgeStatus     : String
+    
+    Local Formula: Wpinvoicetype  : $$StringFindAndReplace:$VoucherTypeName:"\":"-"
+    Local Formula: Wpinvoiceparty : $$StringFindAndReplace:$PartyLedgerName:"\":"-"
+    Local Formula: Wpinvoicedate  : $$String:$Date
+    
+    01 : Query Box : "Do you want to send this invoice via WhatsApp?" : Yes : No
+    02 : If : $$LastResult
+    
+    ;; Check if bridge is available
+    03 : SET : BridgeStatus : $$WA_CheckBridge
+    04 : If : ##BridgeStatus = "unregistered"
+    05 : Msg Box : "Error" : "WhatsApp DLL is not registered!\n\nPlease run register-dll.ps1 as Administrator"
+    06 : Return
+    07 : Else If : ##BridgeStatus = "down"
+    08 : Msg Box : "Error" : "WhatsApp Bridge is not running!\n\nPlease start the bridge using start-bridge.bat"
+    09 : Return
+    10 : End If
+    
+    ;; Create export directory
+    11 : If : NOT ($$IsDirectory : "TallyWhatsapp")
+    12 : Make Dir : "TallyWhatsapp"
+    13 : End If
+    
+    ;; Get contact numbers
+    14 : SET : Contacts : @@GetContacts
+    15 : If : $$IsEmpty : ##Contacts
+    16 : Msg Box : "Info" : "Mobile number not found!\n\nPlease add mobile number to party ledger (12 digits with country code)"
+    17 : Return
+    18 : End If
+    
+    ;; Clean up trailing comma
+    19 : If : $$Right : ##Contacts : 1 = ","
+    20 : SET : Contacts : $$Left : ##Contacts : ($$Length : ##Contacts - 1)
+    21 : End If
+    
+    ;; Configure PDF export
+    22 : Set : SVBrowserWidth  : 210
+    23 : Set : SVBrowserHeight : 297
+    24 : Set : SVIsPortrait    : Yes
+    25 : SET : PrintFileName   : "TallyWhatsapp" + "\" + @Wpinvoicetype + "_" + @Wpinvoiceparty + "_" + @Wpinvoicedate
+    26 : SET : SVExportFormat  : $$SysName : PDF
+    27 : SET : SVPrintFileName : $$MakeExportName : ##PrintFileName : ##SVExportFormat
+    28 : SET : SVOpenFileAfterExport : No
+    
+    ;; Export PDF
+    29 : EXPORT REPORT : . : Yes : Yes
+    30 : SET : Exportedfilepath : $$GetFileFullPath : ##SVPrintFileName
+    
+    ;; Send via WhatsApp using new HTTP-based interface
+    31 : If : $$IsCOMInterfaceInvokable : WA_ComSendFileWithMessage
+    32 : Exec COM Interface : WA_ComSendFileWithMessage : ##Contacts : ##Exportedfilepath : @@Msgtitle
+    33 : If : $$InStr : $$LastResult : "success"
+    34 : Msg Box : "Success" : "Invoice sent successfully via WhatsApp!\n\n" + $$LastResult
+    35 : Else
+    36 : Msg Box : "Status" : $$LastResult
+    37 : End If
+    38 : Else
+    39 : Msg Box : "Error" : "COM Interface is not invokable!\n\nDLL is not registered properly"
+    40 : End If
+    
+    41 : End If
+    42 : Return
+
+;; ─── COM Interface for HTTP-based WhatsApp Bridge ───────────────────────
+
+[COM Interface: WA_ComCheckBridge]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : IsServiceAvailable
+    Return    : Logical
+
+[COM Interface: WA_ComSendFileWithMessage]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : SendFileWithMessage
+    Parameter : p1 : String : In
+    Parameter : p2 : String : In
+    Parameter : p3 : String : In
+    Return    : String
+
+[COM Interface: WA_ComSendMessage]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : SendMessage
+    Parameter : p1 : String : In
+    Parameter : p2 : String : In
+    Return    : String
+
+;; ─── Helper Functions ────────────────────────────────────────────────────
+
+[Function: WA_CheckBridge]
+    Returns : String
+    
+    01 : If : $$IsCOMInterfaceInvokable : WA_ComCheckBridge
+    02 : Exec COM Interface : WA_ComCheckBridge
+    03 : If : $$LastResult
+    04 : Return : "ok"
+    05 : Else
+    06 : Return : "down"
+    07 : End If
+    08 : Else
+    09 : Return : "unregistered"
+    10 : End If
+
+;; ─── System Formulae ─────────────────────────────────────────────────────
+
+[System: Formulae]
+    Msgtitle      : "Dear Customer, please find your invoice attached. Thank you for your business!"
+    GetContacts   : ($LedgerMobile : Ledger : $PartyLedgerName) + ","

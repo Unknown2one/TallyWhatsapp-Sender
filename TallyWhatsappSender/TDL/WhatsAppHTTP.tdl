@@ -1,0 +1,155 @@
+;; =============================================================================
+;;  WhatsAppHTTP.tdl  —  COM Interop helper functions for WhatsApp bridge
+;;  Acts as a wrapper pointing to TallyWhatsappsender.dll HTTP Client
+;; =============================================================================
+
+;; ─── Global Formulae ──────────────────────────────────────────────────────────
+[System: Formulae]
+    ;; Shared export directory for PDF files (relative path, created by TDL)
+    WA_ExportDir    : "TallyWhatsapp"
+
+    ;; Default caption sent alongside every document
+    WA_DefaultTitle : "Please find the attached document."
+
+    ;; Contact formula — reads mobile number from the selected party ledger
+    WA_GetContacts  : $LedgerMobile:Ledger:$PartyLedgerName
+
+;; ─── COM Interface Definitions ───────────────────────────────────────────────
+[COM Interface: WA_ComCheckBridge]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : IsServiceAvailable
+    Return    : Logical
+
+[COM Interface: WA_ComSendMessage]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : SendMessage
+    Parameter : p1 : String : In
+    Parameter : p2 : String : In
+    Return    : String
+
+[COM Interface: WA_ComSendFile]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : SendFile
+    Parameter : p1 : String : In
+    Parameter : p2 : String : In
+    Parameter : p3 : String : In
+    Return    : String
+
+[COM Interface: WA_ComSendFileWithMessage]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : SendFileWithMessage
+    Parameter : p1 : String : In
+    Parameter : p2 : String : In
+    Parameter : p3 : String : In
+    Return    : String
+
+;; ─── Helper: strip trailing comma / whitespace from contact string ────────────
+[Function: WA_CleanContact]
+    Parameter : pRaw : String
+    Returns   : String
+
+    Variable  : vOut : String
+    01 : SET : vOut : $$Trim:##pRaw
+    ;; Remove trailing comma that older TDL code appended
+    02 : If : $$Right:##vOut:1 = ","
+    03 : SET : vOut : $$Left:##vOut:($$Length:##vOut - 1)
+    04 : End If
+    05 : Return : ##vOut
+
+;; ─── Helper: ensure export directory exists ───────────────────────────────────
+[Function: WA_EnsureExportDir]
+    01 : If  : NOT $$IsDirectory:##WA_ExportDir
+    02 : Make Dir : ##WA_ExportDir
+    03 : End If
+    04 : Return
+
+;; ─── Health check — returns "ok" or "down" ────────────────────────────────────
+[Function: WA_CheckBridge]
+    Returns   : String
+    
+    01 : If : $$IsCOMInterfaceInvokable:WA_ComCheckBridge
+    02 :    Exec COM Interface : WA_ComCheckBridge
+    03 :    If : $$LastResult
+    04 :        Return : "ok"
+    05 :    Else
+    06 :        Return : "down"
+    07 :    End If
+    08 : Else
+    09 :    Return : "unregistered"
+    10 : End If
+
+;; ─── Send a text-only WhatsApp message ───────────────────────────────────────
+[Function: WA_HTTPSendMessage]
+    Parameter : pContact : String
+    Parameter : pMessage : String
+    Returns   : String
+
+    Variable  : vContact : String
+    Variable  : vMsgSafe : String
+
+    01 : SET : vContact : $$WA_CleanContact:##pContact
+    02 : If  : $$IsEmpty:##vContact
+    03 : Return : "ERROR: No contact number provided"
+    04 : End If
+
+    ;; Format message: convert %0A (used in TDL string definitions) to actual newlines
+    05 : SET : vMsgSafe : $$StringFindAndReplace:##pMessage:"%0A":"\n"
+
+    06 : If : $$IsCOMInterfaceInvokable:WA_ComSendMessage
+    07 :    Exec COM Interface : WA_ComSendMessage : ##vContact : ##vMsgSafe
+    08 :    Return : $$LastResult
+    09 : Else
+    10 :    Return : "ERROR: C# Wrapper DLL Not Registered!"
+    11 : End If
+
+;; ─── Send a file (PDF/image/etc.) with optional caption ──────────────────────
+[Function: WA_HTTPSendFile]
+    Parameter : pContact  : String
+    Parameter : pFilePath : String
+    Parameter : pCaption  : String
+    Returns   : String
+
+    Variable  : vContact : String
+    Variable  : vCapSafe : String
+
+    01 : SET : vContact : $$WA_CleanContact:##pContact
+    02 : If  : $$IsEmpty:##vContact
+    03 : Return : "ERROR: No contact number provided"
+    04 : End If
+
+    05 : SET : vCapSafe : $$StringFindAndReplace:##pCaption:"%0A":"\n"
+
+    06 : If : $$IsCOMInterfaceInvokable:WA_ComSendFile
+    07 :    Exec COM Interface : WA_ComSendFile : ##vContact : ##pFilePath : ##vCapSafe
+    08 :    Return : $$LastResult
+    09 : Else
+    10 :    Return : "ERROR: C# Wrapper DLL Not Registered!"
+    11 : End If
+
+;; ─── Send a file AND then a text message (two separate WhatsApp messages) ─────
+[Function: WA_HTTPSendFileWithMessage]
+    Parameter : pContact  : String
+    Parameter : pFilePath : String
+    Parameter : pMessage  : String
+    Returns   : String
+
+    Variable  : vContact : String
+    Variable  : vMsgSafe : String
+
+    01 : SET : vContact : $$WA_CleanContact:##pContact
+    02 : If  : $$IsEmpty:##vContact
+    03 : Return : "ERROR: No contact number provided"
+    04 : End If
+
+    05 : SET : vMsgSafe : $$StringFindAndReplace:##pMessage:"%0A":"\n"
+
+    06 : If : $$IsCOMInterfaceInvokable:WA_ComSendFileWithMessage
+    07 :    Exec COM Interface : WA_ComSendFileWithMessage : ##vContact : ##pFilePath : ##vMsgSafe
+    08 :    Return : $$LastResult
+    09 : Else
+    10 :    Return : "ERROR: C# Wrapper DLL Not Registered!"
+    11 : End If

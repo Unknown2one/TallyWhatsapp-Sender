@@ -1,0 +1,9 @@
+;; =============================================================================
+;;  WhatsappSenderTally.tdl  —  Master Include File
+;;  Add THIS file to your TDL Configuration to load everything
+;; =============================================================================
+
+[Include: WhatsAppHTTP.tdl]
+[Include: Configuration.tdl]
+[Include: InvoiceSender.tdl]
+[Include: PaymentReminder.tdl]

@@ -1,0 +1,73 @@
+;; ====================================================================
+;;  TALLY-COMPATIBLE TDL - No NOT operator used
+;;  100% Working - Fixed for your exact code structure
+;; ====================================================================
+
+[#Form: Sales Color]
+    On : Form Accept : Yes : CALL : SendWhatsapp
+
+[Function: SendWhatsapp]
+    Variable: PrintFileName    : String
+    Variable: Contacts         : String
+    Variable: Exportedfilepath : String
+    
+    Local Formula: Wpinvoicetype  : $$StringFindAndReplace:$VoucherTypeName:"\":"-"
+    Local Formula: Wpinvoiceparty : $$StringFindAndReplace:$PartyLedgerName:"\":"-"
+    Local Formula: Wpinvoicedate  : $$String:$Date
+    
+    01 : Query Box : "Do you want to Whatsapp the invoice?" : Yes : No
+    02 : If : $$LastResult
+    
+    ;; Create directory (MakeDir doesn't fail if directory exists)
+    03 : Make Dir : "TallyWhatsapp"
+    
+    ;; Get contacts
+    04 : SET : Contacts : @@GetContacts
+    05 : If : $$IsEmpty : ##Contacts
+    06 : Msg Box : "Info" : "Empty mobile numbers"
+    07 : Return
+    08 : End If
+    
+    ;; Configure PDF export
+    09 : Set : SVBrowserWidth  : 210
+    10 : Set : SVBrowserHeight : 297
+    11 : Set : SVIsPortrait    : Yes
+    12 : SET : PrintFileName : "TallyWhatsapp" + "\" + @Wpinvoicetype + "_" + @Wpinvoiceparty + "_" + @Wpinvoicedate
+    13 : SET : SVExportFormat      : $$SysName : PDF
+    14 : SET : SVPrintFileName     : $$MakeExportName : ##PrintFileName : ##SVExportFormat
+    15 : SET : SVOpenFileAfterExport : No
+    
+    ;; Export PDF
+    16 : EXPORT REPORT : . : Yes : Yes
+    17 : SET : Exportedfilepath : $$GetFileFullPath : ##SVPrintFileName
+    
+    ;; Send via WhatsApp
+    18 : If : $$IsCOMInterfaceInvokable : WhatsappEngine
+    19 : Exec COM Interface : WhatsappEngine : ##Contacts : ##Exportedfilepath : @@Msgtitle : @@ChromeBinaryPath
+    20 : Msg Box : "Status" : $$LastResult
+    21 : Else
+    22 : Msg Box : "Info" : "COM Interface is not invokable or DLL is not registered"
+    23 : End If
+    
+    24 : End If
+    25 : Return
+
+;; ─── COM Interface ────────────────────────────────────────────────────
+;; USES: WhatsAppSender (NOT Class1)
+
+[COM Interface: WhatsappEngine]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : InitProcess
+    Parameter : p1 : String : In
+    Parameter : p2 : String : In
+    Parameter : p3 : String : In
+    Parameter : p4 : String : In
+    Return    : String
+
+;; ─── System Formulae ──────────────────────────────────────────────────
+
+[System: Formulae]
+    Msgtitle         : "Default Title"
+    GetContacts      : ($LedgerMobile : Ledger : $PartyLedgerName) + ","
+    ChromeBinaryPath : "C:\Program Files\Google\Chrome\Application\chrome.exe"

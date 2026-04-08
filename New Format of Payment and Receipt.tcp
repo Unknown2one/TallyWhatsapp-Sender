@@ -1,0 +1,620 @@
+;**********************************************************;
+;*********************================*********************;
+;*********************| Explore Busy |*********************;
+;*********************================*********************;
+;**********************************************************;
+
+[#Form: Payment Color]
+
+Delete : Print
+Add : Print : Payment Voucher
+
+[Report : Payment Voucher]
+Object : Voucher
+Filtered : Yes
+Print : VCHPrintConfigure
+
+[Form : Payment Voucher]
+Parts : PYVCHCOmpanyAddr, SMTDate, SMTTime, VoucherType, PaymentFrom, ChqDetail, TopHeadings, VoucherDetails, CheckedBy, VCHTotalAmount
+Width : ##PPRWidth inch
+Height : ##PPRHeight inch
+Space Top : ##PPRSpaceTop inch
+
+Width : 190 mms
+HorizontalAlign : Centre
+
+
+[Part: PYVCHCOmpanyAddr]
+
+	Part    	: PRCT CompanyDetails1 
+	HorizontalAlign : Centre	
+	Border		: Thick Cover
+
+[Part : PRCT CompanyDetails1]
+
+	Parts	: PRCT Image1, PRCT Company Addr1 , Empty
+	Local	: Part	: Empty	: Width	: if @@IsLogoEnabled then 15% Else 10% Page
+	Local	: Part	: EXPSMP Image	: Height	: If ($$InExportMode And $$IsSysNameEqual:HTML:##SVExportFormat) then 15% else 10% Page
+	Local	: Part	: EXPSMP Image	: Invisible	: NOT @@IsLogoEnabled
+	
+[Part: PRCT Image1]
+	
+	Part		: Empty, EXPSMP Image
+	Vertical: Yes
+	
+	
+	Local		: Line	: Empty	: Local	: Field	: Simple Field	: Set as	: ""
+	Invisible	: NOT @@IsLogoEnabled
+
+[Part : PRCT Company Addr1]
+
+    Lines   : PRCT Company1
+    Local   : Field : Simple Field  : Align     : Centre
+    Local   : Field : Simple Field  : FullWidth : Yes
+    SpaceBottom : 0.1
+	Option  : PRCTAddr1 : ##PrintWithCompanyName AND ##PrintWithAddress
+	
+[!Part: PRCTAddr1]
+
+        Add 	: Lines : PRCTAddr1
+        Repeat  : PRCT Addr1 : Company Address
+	Option	: PRCT CMA CompanyAddress1	: NOT ($$IsSysNameEqual:Primary:##SVAddressToPrint OR $$IsEmpty:##SVAddressToPrint)
+	
+	[!Part: PRCT CMA CompanyAddress1]
+		
+		Delete	: Repeat
+		Add		: Repeat	: PRCTAddr1	: Company Multi Address Print
+
+[Line: PRCT Company1]
+
+        Fields      : Simple Field
+        Local       : Field : Simple Field  : Set as    : @@CmpMailName
+        Local       : Field : Simple Field  : Style     : INSTITUTE ; Normal Bold
+        Local       : Field : Simple Field  : PrePrinted: Yes
+        Invisible   : NOT ##PrintWithCompanyName
+
+		Option		: PRCT CMA CompanyName1	: NOT ($$IsSysNameEqual:Primary:##SVAddressToPrint OR $$IsEmpty:##SVAddressToPrint)
+
+[!Line: PRCT CMA CompanyName1]
+			
+		Local       : Field : Simple Field  : Set as    : $(Company, ##SVCurrentCompany).MultiAddressList[1, @@IsSameCmpAddrType].MailingName
+				
+[Line: PRCT Addr1]
+
+        Fields      : Simple Field
+        Local       : Field : Simple Field  : Set as    : $Address
+        Local       : Field : Simple Field  : Border    : Thin Bottom : $$Line = $$NumItems
+        Local       : Field : Simple Field  : PrePrinted: Yes
+
+[Part : SMTDate]
+	Lines : SMDate
+	HorizontalAlign : Left
+	Border: Thick Left Right
+
+[Line : SMDate]
+	Fields : Simple Prompt, SystDate
+	RightFields : Info Field, VCHNo
+	Local : Field : Simple Prompt: Info: "Date  "	
+	Local : Field : Simple Prompt: Style : StyleAllText
+	Local : Field : Info Field : Info : "Voucher No. : "
+	Local : Field : Info Field : Style : StyleAllText
+
+[Field : SystDate]
+	Set as : $$MachineDate
+	Style : StyleAllTextBold
+
+[Field : VCHNo]
+	Set as : $VoucherNumber
+	Style : StyleAllTextBold
+
+[Part : SMTTime]
+	Lines : SMTTimeLine
+	HorizontalAlign : Left
+	Border: Thick Left Right
+
+[Line : SMTTimeLine]
+	Fields : Simple Prompt, SystTime	
+	RightFields : Info Field, VCHDated
+	Local : Field : Simple Prompt : Info: "Time  "
+	Local : Field : Simple Prompt : Style : StyleAllText
+	Local : Field : Info Field : Info : "Dated : "
+	Local : Field : Info Field : Style : StyleAllText
+
+[Field : SystTime]
+	Set as : $$MachineTime
+	Style : StyleAllTextBold
+
+[Field : VCHDated]
+	Set as : $Date
+	Style : StyleAllTextBold
+
+[Part : VoucherType]
+	Lines : VoucherTypeLine
+	HorizontalAlign : Center
+	Border: Thick Left Right
+
+[Line : VoucherTypeLine]
+	Fields : Info Field
+	Local : Field : Info Field : Info: "Payment Voucher"
+	Local : Field : Info Field : Style : StyleHeadingI
+
+	
+[Part : PaymentFrom]
+	Lines : PaymentFromLine
+	HorizontalAlign : Center	
+	Border: Thick Left Right
+
+[Line : PaymentFromLine]
+	Space Top: 2
+	Fields : PMTFrom
+	
+[Field : PMTFrom]		
+	Set as : $$CollectionField:$LedgerName:($$NumItems:AllLedgerEntries):AllLedgerEntries ;;"Explore Busy (YouTube Channel)" 
+	Style : StyleHeadingI
+
+[Part : ChqDetail]
+	Lines : ChqDetailLine
+	HorizontalAlign : Right
+	Border: Thick Left Right
+
+[Line : ChqDetailLine]
+	Fields : Info Field, ChqNum
+	Local : Field : Info Field : Info: "Cheque # "
+	Local : Field : Info Field : Style : StyleAllText
+
+[Field : ChqNum]
+	Set as : $$Number:$DueDateOfPymt
+	Style : StyleAllTextBold
+
+
+[Part : TopHeadings]
+	Lines : TopHeadingsLine
+	HorizontalAlign : Center
+	Border: Thick Left Right
+
+[Line : TopHeadingsLine]
+	Fields : PartyTitle, PartyDr, PartyCr 
+
+[Field : PartyTitle]	
+	Fields : Info Field
+	Local : Field : Info Field : Info: "Title and Narration"
+	Local : Field : Info Field : Style : StyleAllTextBold
+	Local : Field : Info Field : Width : 70
+	Border : BlueBorderXThin
+
+[Field : PartyNarration]	
+	Fields : Info Field
+	Local : Field : Info Field : Info: "Narration"
+	Local : Field : Info Field : Style : StyleAllTextBold
+	Local : Field : Info Field : Width : 40
+	Border : BlueBorderXThin
+
+[Field : PartyDr]	
+	Fields : Info Field
+	Local : Field : Info Field : Info: "Debit"
+	Local : Field : Info Field : Style : StyleAllTextBold
+	Local : Field : Info Field : Width : 10
+	Local : Field : Info Field : Align : Center
+	Border : BlueBorderXThin
+
+[Field : PartyCr]	
+	Fields : Info Field
+	Local : Field : Info Field : Info: "Credit"
+	Local : Field : Info Field : Style : StyleAllTextBold
+	Local : Field : Info Field : Width : 10
+	Local : Field : Info Field : Align : Center
+	Border : BlueBorderXThin
+
+
+[Part : VoucherDetails]	
+	Space Top: 1.5
+	Line : PartyDetailsAll,  PartyLedNarr
+	Repeat : PartyDetailsAll : AllLedgerEntries
+	Border: Thick Left Right
+
+[Line : PartyDetailsAll]
+	Lines : PartyName,  BlankLineI 
+
+[Line : PartyName]
+	Field : PartyLedName, PartyDrAmount, PartyCrAmount
+	Explode : PartyLedNarrPart : yes
+	
+[Part : PartyLedNarrPart]
+	Line : PartyLedNarr
+	Repeat : PartyLedNarr : LedgerEntries
+
+[Line : PartyLedNarr]
+	
+	Fields      : Short Prompt, PartyLedNarration
+        Local       : Field : Short Prompt : Info  : $$LocaleString:"Payment Remarks" + ":"
+        Local       : Field : Short Prompt : PrePrinted : Yes
+        SpaceBottom : 1
+	Space Top   : 2
+		
+
+[Field : PartyLedName]
+	Set as : $LedgerName
+	Width : 69
+	Space Left : 1
+	Style : StyleAllTextBold	
+
+[Field : PartyDrAmount]
+	Set as : if $$IsDr:$Amount then $$AsDrAmt:$Amount else ""
+	Align : Right
+	Width : 11
+	Style : StyleAllText
+
+[Field : PartyCrAmount]
+	Set as : if $$IsDr:$Amount then "" else $$AsCrAmt:$Amount
+	Align : Right
+	Space Right = 1
+	Width : 10.5
+	Style : StyleAllText
+
+[Field : PartyLedNarration]
+	Set as : $Narration
+	Width : 69
+	Line : if $$StringLength:$Narration > 120 then 2 else 1
+	Style : StyleAllTextNarration
+	
+[Line : BlankLineI]
+	Fields : Simple Field
+	Local : Field : Simple Field : Set as : " "		
+	Local : Field : Simple Field : Style : StyleAllTextBold		
+	Local : Field : Simple Field : Align : Right
+	Local : Field : Simple Field : Width : 69
+
+[Line : BankNarrLine]
+	Field : BankNarrField
+[Field : BankNarrField]
+	Set as : $Narration
+	Width : 69
+	Space Left : 1
+	Style : StyleAllText
+
+[Part : VCHTotalAmount]
+	Space Top: 2
+	Line : TotalWordsLine
+	Width : 190 mms
+	;Border: Thick Left Right
+	Space Bottom: 1
+	Border: Thick Left Right Double Bottom
+
+[Line : TotalWordsLine]
+	Fields : Info Field
+	RightFields : TotalPaidFig
+	Local : Field : Info Field : Info: "Paid "+$$InWords:(($$CollectionField:$Amount:($$NumItems:AllLedgerEntries):AllLedgerEntries)+00000)+" Only." ;;"Paid "+$$String:$Amount+" Only."
+	Local : Field : Info Field : Style : StyleAllTextBold
+	Local : Field : Info Field : Width : 69
+	Border : BlueBorderXThin
+
+[Field : TotalPaidFig]	
+	Set as : $$CollectionField:$Amount:($$NumItems:AllLedgerEntries):AllLedgerEntries ;;$Amount	
+	Width : 23
+	Align : Right
+	Style : StyleAllTextBold
+	Border : BlueBorderXThin
+
+[Part : CheckedBy]
+	Lines : CreatedByUserLine
+	Space Top : 3
+	HorizontalAlign : Center
+	Border: Thick Left Right
+
+[Line : CreatedByUserLine]
+	Fields : Info Field, CheckedByLine, ApprovedByLine, ReceivedByLine
+	Local : Field : Info Field : Info: "Created By : "+$$CmpUserName
+	Local : Field : Info Field : Style : StyleAllTextSmall
+	Local : Field : Info Field : Width : 17
+	Local : Field : Info Field : Space Left : 1
+	;;Local : Field : Info Field : Border : Thin Bottom
+	;;Local : Field : Info Field : Border : Thin Top Bottom
+	Border: Thick Left Right
+
+[Field : CheckedByLine]
+	Fields : Info Field
+	Local : Field : Info Field : Info: "Checked By : ____________________"
+	Local : Field : Info Field : Style : StyleAllText
+	Local : Field : Info Field : Width : 23
+	Local : Field : Info Field : Space Left : 1
+
+[Field : ApprovedByLine]
+	Fields : Info Field
+	Local : Field : Info Field : Info: "Approved By : ____________________"
+	Local : Field : Info Field : Style : StyleAllText
+	Local : Field : Info Field : Width : 24
+	Local : Field : Info Field : Space Left : 1
+
+[Field : ReceivedByLine]
+	Fields : Info Field
+	Local : Field : Info Field : Info: "Received By : ____________________"
+	Local : Field : Info Field : Style : StyleAllTextBold
+	Local : Field : Info Field : Width : 24
+	Local : Field : Info Field : Space Left : 1
+
+
+[Border : BlueBorderXThick]
+	Top : thick
+	Bottom : Thick
+	Right : Thick
+	Left : Thick
+	Color : "Blue"
+	Print Fg: "Blue"
+
+[Border : BlueBorderXThin]
+	Top : thin
+	Bottom : thin
+	Right : thin
+	Left : thin
+	Color : "Blue"
+	Print Fg: "Blue"
+	
+[Border: Thick Left Right Double Bottom]
+
+    Left         : Thick
+    Right        : Thick
+    Bottom       : Thick, Double
+
+[Style : StyleGSName]
+	Font: "Cooper Black"
+	Height : 12	
+
+
+[Style : StyleAllTextSmall]
+	Font: "Calibri"
+	Height : 8	
+	
+[Style : StyleAllText]
+	Font: "Calibri"
+	Height : 10	
+	
+[Style : StyleAllTextNarration]
+	Font: "Calibri"
+	Height : 8	
+
+[Style : StyleAllTextBold]
+	Font: "Calibri"
+	Height : 10
+	Bold : Yes
+	
+[Style : StyleHeadingI]
+	Font: "Verdana"
+	Height : 10
+	Bold : Yes
+	
+;**********************************************************;
+;*********************================*********************;
+;*********************| Explore Busy |*********************;
+;*********************================*********************;
+;**********************************************************;
+[#Form: Receipt Color]
+
+Delete :pRint
+Add : Print : RCPT EB
+PrintAfterSave : ##PPRCTPrintAfterSave OR ##PRCTPrintAfterSav
+
+[Report : RCPT EB]
+
+Object : Voucher
+PrintSet : Report Title : "ACIIT Receipt"
+Filtered : Yes
+Print : VCHPrintConfigure
+Empty : (NOT ##PRCTPrintEnabled) OR (NOT ##PRCTPrintAfterSave AND $$InAcceptMode) OR $$IsEmpty:$VoucherChequeName
+
+[Form : RCPT EBY]
+Parts : RcptCOmpanyAddr, RcptNoDate, Rcpt Body, RcptFoot
+Width : ##PRCTWidth inch
+Height : ##PRCTHeight inch
+Space Top : ##PRCTSpaceTop inch
+Space Top: 5 mms
+Space Bottom: 0.25 inch
+Space Left : 0.75 inch
+Space Right : 0.25 inch
+Width : 200 mms
+Space Left : 10 mms
+HorizontalAlign : Centre
+
+[Form : RCPT EB]
+Parts : RcptCOmpanyAddr, RcptNoDate, Rcpt Body, RcptFoot
+Width : ##PRCTWidth inch
+Height : ##PRCTHeight inch
+Space Top : ##PRCTSpaceTop inch
+HorizontalAlign : Centre
+
+
+[Part : RcptCompanyAddr]
+Lines : Rcpt Company, Rcpt Addr
+Repeat : Rcpt Addr : Company Address
+Local : Field : Simple Field : Align : Centre
+Local : Field : Simple Field : FullWidth : Yes
+HorizontalAlign : Centre
+
+[Line: Rcpt Company]
+
+Fields : Simple Field
+Local : Field : Simple Field : Set as : ##SVCurrentCompany
+Local : Field : Simple Field : Style : Normal Bold
+
+[Line: Rcpt Addr]
+
+Fields : Simple Field
+Local : Field : Simple Field : Set as : $Address 
+Local : Field : Simple Field : Border : Thin Bottom : $$Line = $$NumItems
+
+[Part : RcptNoDate]
+Lines : Rcpt NODate
+HorizontalAlign : Centre
+Border : Thin Bottom
+SpaceBottom : 0.5
+
+[Line : Rcpt NoDate]
+Fields : Simple Prompt, RcptNo
+RightFields : Info Field, RcptDate
+Local : Field : Simple Prompt : Info : "No. :"
+Local : Field : Info Field : Info : "Date :"
+
+[Field : Rcpt No]
+Set as : $VoucherNumber
+Style : Normal Bold
+
+[Field: Rcpt Date]
+Set as : $$String:$Date:UniversalDate
+Style : Normal Bold
+
+[Part : Rcpt Body]
+Parts : Rcpt Top, Rcpt Bottom
+Vertical : Yes
+
+[Part : Rcpt Top]
+
+Lines : Rcpt Payer, Rcpt PayerAddr, Rcpt Words ;;Rcpt Thru ;;, Rcpt Remarks
+Repeat : Rcpt PayerAddr : Party Address
+Local : Field : Short Prompt : Style : Normal Italic
+Local : Field : Short Prompt : Width : 15
+HorizontalAlign : centre
+
+
+[Line: Rcpt Title]
+
+Fields : Rcpt Title
+SpaceBottom : 2
+
+[Field: Rcpt Title]
+
+Set as : "INTERIM RECEIPT"
+Wide Spaced : Yes
+Style : Large Bold
+Border : Thin Bottom
+Align : Centre
+FullWidth : Yes
+
+[Line: Rcpt Payer]
+
+Fields : Short Prompt, Rcpt Payer
+Local : Field : Short Prompt : Info : "Received with thanks from :"
+SpaceBottom : 0.25
+
+[Field: Rcpt Payer]
+
+Set as : $LedgerName ;;VoucherChequeName
+Style : Normal Bold
+Border : Thin Bottom
+
+[Line : Rcpt PayerAddr]
+Fields : Short Prompt, Rcpt PartyAddr
+Local : Field : Info Field : Width : 17
+Local : Field : Info Field : Info : " "
+
+[Field : Rcpt PartyAddr]
+Set as:$Address 
+Border : THin Bottom
+
+[Line: Rcpt Words]
+
+Fields : Short Prompt, Rcpt Words
+Local : Field : Short Prompt : Info : "The sum of Rupees "
+SpaceBottom : 1
+
+[Field: Rcpt Words]
+
+Set as : $$InWords:#RcptAmount+" Only"
+
+Style : Normal Bold
+Lines : 0
+FullWidth : Yes
+Border : Thin Bottom
+
+[Part : Rcpt Bottom]
+Parts : RcptBottomLeft, RcptBottomRight
+Vertical : No
+Local : Field : Short Prompt : Style : Normal Italic
+Local : Field : Short Prompt : Width : 22
+
+[Part : RcptBottomLeft]
+Lines : RcptThru1, Rcpt Thru2
+
+[Line: Rcpt Thru1]
+Local : Field : Short Prompt : Info : "by Cash/Cheque/DD.No./Fund Trans."
+Fields : Short Prompt
+
+[Field : Rcpt Thru1]
+Info : "by Cash / Cheque / D.D. No./Fund Transfer"
+
+[Line: Rcpt Thru2]
+;; Field : Rcpt Thru2
+Fields : Short Prompt
+Local : Field : Short Prompt : Info : "In Full / Part Payment of "
+
+[Field: Rcpt Thru2]
+Info : "In Full / Part Payment of "
+
+[Part : RcptBottomRight]
+Line : Rcpt Remarks
+
+[Line: Rcpt Remarks]
+
+Fields : Rcpt Remarks
+SpaceBottom : 1
+
+[Field: Rcpt Remarks]
+
+Set as : $Narration
+Style : Normal Bold
+Lines : 0
+Width : 75 mms
+
+
+[Part : Rcpt Foot]
+Lines : ForComp, RcptAmt, CompSign
+Border : Full Thin Top
+
+
+[Line : ForComp]
+Right Fields : ForComp
+SpaceBottom : 1
+
+[Field : ForComp]
+Set As : "For " + ##SVCurrentCompany
+Style : Normal Bold
+
+[Line : RcptAmt]
+Fields : AmtPrompt, RcptAmount
+
+[Field : AmtPrompt]
+Info : "Rs."
+Style : Normal Bold
+Align : Left
+
+[Field: RcptAmount]
+
+Use : Amount Base Field
+Set as : $$CollectionField:$Amount:1:AllLedgerEntries
+Align : Left
+Border : Thin Bottom
+
+[Line : CompSign]
+Fields : ChqRel, PrepCheck
+Right Fields : CompSign
+
+[Field : ChqRel]
+Info : "Cheques are Subject to Realization."
+Align : Left
+Style : Small Bold
+
+[Field : PrepCheck]
+Info : "Accountant"
+SpaceLeft : 25 mms
+Style : Small
+Align : Left
+
+[Field : CompSign]
+Info : "Authorised Signatory"
+Align : Right
+Style : Small Bold
+
+;**********************************************************;
+;*********************================*********************;
+;*********************| Explore Busy |*********************;
+;*********************================*********************;
+;**********************************************************;
+	

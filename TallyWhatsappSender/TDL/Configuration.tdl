@@ -1,0 +1,91 @@
+;; =============================================================================
+;;  Configuration.tdl  —  Tally UI for WhatsApp bridge settings
+;;  Adds a "WhatsApp Settings" menu option under F11 / F12 configuration
+;;  Requires: WhatsAppHTTP.tdl
+;; =============================================================================
+
+;; ─── Test connection function ──────────────────────────────────────────────────
+[Function: WA_TestConnection]
+    Variable : WA_TestResult : String
+
+    01 : SET : WA_TestResult : $$WA_CheckBridge
+    02 : If  : ##WA_TestResult = "ok"
+    03 : Msg Box : "WhatsApp Bridge" : "✅ Connected and authenticated!%0AMessages can be sent."
+    04 : End If
+    05 : If  : ##WA_TestResult = "notlogged"
+    06 : Msg Box : "WhatsApp Bridge" : "⚠️ Bridge is running but NOT authenticated.%0APlease scan the QR code shown in the bridge window."
+    07 : End If
+    08 : If  : ##WA_TestResult = "down"
+    09 : Msg Box : "WhatsApp Bridge" : "❌ Bridge is NOT running.%0A%0ATo start:%0A1. Open Command Prompt%0A2. Navigate to whatsapp-bridge folder%0A3. Run: whatsapp-bridge.exe"
+    10 : End If
+    11 : Return
+
+;; ─── Send a custom text message ───────────────────────────────────────────────
+[Function: WA_SendCustomMessage]
+    Variable : WA_Contacts      : String
+    Variable : WA_CustomMessage : String
+    Variable : WA_BridgeSts  : String
+    Variable : WA_Result     : String
+
+    01 : Query Box  : "Send a custom WhatsApp message?" : Yes : No
+    02 : If : $$LastResult
+
+    ;; ── Check bridge health first ──
+    03 : SET : WA_BridgeSts : $$WA_CheckBridge
+    04 : If  : NOT (##WA_BridgeSts = "ok")
+    05 : Msg Box : "WhatsApp Bridge" : "❌ Bridge is not running or DLL is unregistered.||Status: " + ##WA_BridgeSts
+    06 : Return
+    07 : End If
+
+    12 : SET : WA_Contacts : @@WA_GetContacts
+    13 : If  : $$IsEmpty:##WA_Contacts
+    14 : Msg Box : "WhatsApp" : "No mobile number found for this party."
+    15 : Return
+    16 : End If
+
+    17 : Input : "Enter your message:" : WA_CustomMessage
+
+    18 : If : $$IsEmpty:##WA_CustomMessage
+    19 : Msg Box : "WhatsApp" : "Message cannot be empty."
+    20 : Return
+    21 : End If
+
+    22 : SET : WA_Result : $$WA_HTTPSendMessage:##WA_Contacts:##WA_CustomMessage
+    23 : If  : $$InString:##WA_Result:"true"
+    24 : Msg Box : "WhatsApp Status" : "✅ Message sent successfully to " + ##WA_Contacts
+    25 : Else
+    26 : Msg Box : "WhatsApp Status" : "❌ Failed to send.||Response: " + ##WA_Result
+    27 : End If
+
+    28 : End If
+    29 : Return
+
+;; ─── Instructions / Help box ──────────────────────────────────────────────────
+[Function: WA_ShowHelp]
+    Msg Box : "WhatsApp Integration Help" :
+        "HOW IT WORKS%0A" +
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A" +
+        "1. Start the WhatsApp Bridge service%0A" +
+        "   (Run whatsapp-bridge.exe)%0A%0A" +
+        "2. Scan the QR code with your phone%0A" +
+        "   (One-time — lasts ~20 days)%0A%0A" +
+        "3. Use Alt+W in any Sales/Receipt form%0A" +
+        "   to send the document via WhatsApp%0A%0A" +
+        "SHORTCUTS%0A" +
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A" +
+        "Alt+W — Send invoice/receipt%0A" +
+        "Alt+R — Send payment reminder%0A%0A" +
+        "TROUBLESHOOTING%0A" +
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A" +
+        "• Ensure bridge service is running%0A" +
+        "• Check mobile number in ledger (12 digits, no +)"
+    Return
+
+;; ─── Add to Gateway of Tally menu ────────────────────────────────────────────
+[#Menu: Gateway of Tally]
+    Add     : Key Item : WA_MainMenu : "W" : "WhatsApp"
+
+[Menu: WA_MainMenu]
+    Title   : "WhatsApp Tools"
+    Add     : Key Item : "T" : Call : WA_TestConnection   : "Test Connection"
+    Add     : Key Item : "H" : Call : WA_ShowHelp          : "Help / Instructions"

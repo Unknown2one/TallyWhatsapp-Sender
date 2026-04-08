@@ -1,0 +1,72 @@
+;; =============================================================================
+;;  WhatsAppBase.tdl  —  Core WhatsApp sender functions for Tally integration
+;;  Used by: InvoiceSender.tdl, ReceiptSender.tdl, PaymentReminder.tdl
+;; =============================================================================
+
+;; ─── COM Interface ────────────────────────────────────────────────────────────
+[COM Interface: WhatsappEngine]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : InitProcess
+    Parameter : p1 : String : In
+    Parameter : p2 : String : In
+    Parameter : p3 : String : In
+    Parameter : p4 : String : In
+    Return    : String
+
+[COM Interface: WhatsAppSendMessage]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : SendMessage
+    Parameter : p1 : String : In    ;; contact(s)
+    Parameter : p2 : String : In    ;; message text
+    Return    : String
+
+[COM Interface: WhatsAppSendFile]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : SendFile
+    Parameter : p1 : String : In    ;; contact(s)
+    Parameter : p2 : String : In    ;; file path
+    Parameter : p3 : String : In    ;; caption (can be empty)
+    Return    : String
+
+[COM Interface: WhatsAppSendFileWithMessage]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : SendFileWithMessage
+    Parameter : p1 : String : In    ;; contact(s)
+    Parameter : p2 : String : In    ;; file path
+    Parameter : p3 : String : In    ;; message
+    Return    : String
+
+[COM Interface: WhatsAppIsAvailable]
+    Project   : TallyWhatsappsender
+    Class     : WhatsAppSender
+    Interface : IsServiceAvailable
+    Return    : Logical
+
+;; ─── System Formulae (global settings – override in your company TDL) ─────────
+[System: Formulae]
+    ;; Shared export directory (created automatically)
+    WA_ExportDir        : "TallyWhatsapp"
+
+    ;; Default message title sent alongside the document
+    WA_DefaultTitle     : "Please find the attached document."
+
+    ;; Chrome binary (kept for backward compatibility, not used in new API mode)
+    WA_ChromeBinaryPath : "C:\Program Files\Google\Chrome\Application\chrome.exe"
+
+    ;; Contact formula – reads mobile from the selected party ledger
+    ;; Produces a comma-separated string (trailing comma handled in DLL)
+    WA_GetContacts      : ($LedgerMobile:Ledger:$PartyLedgerName) + ","
+
+    ;; Service-health check result
+    WA_ServiceOK        : $$IsCOMInterfaceInvokable:WhatsAppIsAvailable
+
+;; ─── Shared utility function ──────────────────────────────────────────────────
+[Function: WA_EnsureExportDir]
+    03 : If  : NOT $$IsDirectory:##WA_ExportDir
+    04 : Make Dir : ##WA_ExportDir
+    05 : End If
+    06 : Return
