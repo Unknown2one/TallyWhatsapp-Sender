@@ -1,22 +1,37 @@
-# Build Folders
+# ---------------------------------------------
+# 1. IGNORE EVERYTHING IN THE ROOT FOLDER FIRST
+# ---------------------------------------------
+/*
+
+# ---------------------------------------------
+# 2. ALLOW ONLY THE ESSENTIAL FOLDERS AND FILES
+# ---------------------------------------------
+!/.gitignore
+!/README.md
+!/Tally-TDL/
+!/Tally-COM-Interface/
+!/Backend-Bridge/
+!/Build-Scripts/
+
+# ---------------------------------------------
+# 3. INSIDE ESSENTIAL FOLDERS, IGNORE JUNK (Binaries/DBs)
+# ---------------------------------------------
 bin/
 obj/
 Binary/
 .vs/
 .idea/
+vendor/
 
 # Go files
 whatsapp-session.db*
-vendor/
+whatsapp-session.json
 
 # Tally outputs
 TallyWhatsapp/
 *.pdf
 
-# Windows binaries
+# Windows binaries (We only push source code, not the built DLLs)
 *.dll
 *.exe
 *.pdb
-
-# Archives
-Archive/
