@@ -15,13 +15,13 @@ if %errorlevel% equ 0 (
 
 echo [2/3] Compiling the C# Solution...
 set MSBUILD_PATH=C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe
-%MSBUILD_PATH% "%~dp0TallyWhatsappsender\TallyWhatsappsender.csproj" /p:Configuration=Release /t:Rebuild
+%MSBUILD_PATH% "%~dp0..\Tally-COM-Interface\TallyWhatsappsender\TallyWhatsappsender.csproj" /p:Configuration=Release /t:Rebuild
 
 echo.
 echo [3/3] Registering the new DLL with Windows COM...
 set REGASM_64=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\regasm.exe
 set REGASM_32=C:\Windows\Microsoft.NET\Framework\v4.0.30319\regasm.exe
-set DLL_PATH="%~dp0TallyWhatsappsender\bin\Release\TallyWhatsappsender.dll"
+set DLL_PATH="%~dp0..\Tally-COM-Interface\TallyWhatsappsender\bin\Release\TallyWhatsappsender.dll"
 
 echo Unregistering old versions...
 %REGASM_64% %DLL_PATH% /unregister /silent
