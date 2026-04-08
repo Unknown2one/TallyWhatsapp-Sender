@@ -1,0 +1,22 @@
+# Build Folders
+bin/
+obj/
+Binary/
+.vs/
+.idea/
+
+# Go files
+whatsapp-session.db*
+vendor/
+
+# Tally outputs
+TallyWhatsapp/
+*.pdf
+
+# Windows binaries
+*.dll
+*.exe
+*.pdb
+
+# Archives
+Archive/

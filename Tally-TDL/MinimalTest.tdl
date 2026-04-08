@@ -1,0 +1,72 @@
+[#Form: Sales Color]
+	On : Form Accept : Yes : CALL : SendWhatsapp
+
+[#Form: Receipt Color]
+	On : Form Accept : Yes : CALL : SendWhatsapp
+
+[Function: SendWhatsapp]
+
+	Variable: PrintFileName    :String
+	Variable: Contacts  :String
+	Variable: Exportedfilepath :String
+	Variable: ActualParty : String
+
+	Local Formula:SafeVchNo:$$StringFindAndReplace:($$StringFindAndReplace:$VoucherNumber:"/":"-"):"\":"-"
+	Local Formula:PartyBal: $ClosingBalance:Ledger:##ActualParty
+	Local Formula:BalStr: IF $$IsEmpty:@PartyBal THEN "0.00" ELSE $$String:@PartyBal
+	Local Formula:VoucherStr: IF $$IsEqual:$VoucherTypeName:"Receipt" THEN "Receipt No. " ELSE "Sales Invoice No. "
+	Local Formula:FilePrefix: IF $$IsEqual:$VoucherTypeName:"Receipt" THEN "Receipt_" ELSE "Sales_"
+	Local Formula:LocalMsgtitle: "Greetings! Please find attached your " + @VoucherStr + $VoucherNumber + " dated " + $$String:$Date + " for " + ##ActualParty + ". Your outstanding balance is " + @BalStr + ". Thank You!"
+	Local Formula:LocalContacts: IF $$IsEmpty:($LedgerMobile:Ledger:##ActualParty) THEN "" ELSE "91" + ($LedgerMobile:Ledger:##ActualParty) + ","
+	
+	00   : SET : ActualParty : ""
+	01   : WALK COLLECTION : All Ledger Entries
+	02   :    If : NOT $$IsEmpty:($LedgerMobile:Ledger:$LedgerName)
+	03   :        SET : ActualParty : $LedgerName
+	04   :    End If
+	05   : END WALK
+	06   : If : $$IsEmpty:##ActualParty
+	07   :    SET : ActualParty : $PartyLedgerName
+	08   : End If
+
+    09   : Query Box:"Do you want to Whatsapp the invoice?":Yes:No
+	10   : If:$$LastResult
+	11   : If: NOT $$IsDirectory:"TallyWhatsapp"
+	12   : Make Dir:"TallyWhatsapp"
+	13   : End If
+	14   : SET : Contacts :@LocalContacts
+	15   : If:$$IsEmpty:##Contacts
+	16   : Msg Box:"Info": "Empty mobile numbers"  
+	17   : Return
+	18   : End If
+	19   : Set:  SVBrowserWidth :210
+	20   : Set:  SVBrowserHeight : 297
+	21   : Set:  SVIsPortrait	: Yes
+	22   : SET : PrintFileName :"TallyWhatsapp\" + @FilePrefix + @SafeVchNo ; Export file name
+    23   : SET : SVExportFormat 	: $$SysName:PDF
+	24   : SET : SVPrintFileName	: $$MakeExportName:##PrintFileName:##SVExportFormat
+	25   : SET : SVOpenFileAfterExport : No
+	26   : EXPORT REPORT :.: Yes:Yes
+	27   : SET :Exportedfilepath:$$GetFileFullPath:##SVPrintFileName  ;;Exported file path
+	28   : If: $$IsCOMInterfaceInvokable:WhatsappEngine
+    29   : Exec COM Interface:WhatsappEngine:##Contacts:##Exportedfilepath:@LocalMsgtitle:@@ChromeBinaryPath
+	30   : Msg Box:"Status":$$LastResult
+	31   : Else
+	32   : Msg Box:"Info":"COM Interface is not invokable or\n DLL is not registered"
+	33   : End If
+	34   : End If
+	35   : Return			
+		
+[COM Interface:WhatsappEngine]
+	
+    Project:TallyWhatsappsender
+	Class:WhatsAppSender
+	Interface:InitProcess
+	Parameter:p1:String:In
+	Parameter:p2:String:In
+	Parameter:p3:String:In
+	Parameter:p4:String:In
+	Return: String
+	
+[System:Formulae]
+	ChromeBinaryPath : "C:\Program Files\Google\Chrome\Application\chrome.exe" ;; path to chrome application in your system
