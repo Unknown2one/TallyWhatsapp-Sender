@@ -67,3 +67,4 @@ This repository provides a complete End-to-End solution to seamlessly transfer v
 ## 🤝 Contributing
 
 We welcome pull requests! Feel free to fork this project, submit improvements, and report issues. Let's make Tally to WhatsApp integrations fast, un-frozen, and better for everyone!
+# TallyWhatsapp-Sender
